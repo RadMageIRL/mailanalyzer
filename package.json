@@ -1,0 +1,23 @@
+{
+  "name": "mailanalyzer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local-first email header analyzer for SPF, DKIM, DMARC, Microsoft 365, mail routing, phishing indicators, and troubleshooting.",
+  "license": "MIT",
+  "author": "RadMageIRL",
+  "homepage": "https://radmagelabs.com/mailanalyzer/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RadMageIRL/mailanalyzer.git"
+  },
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "build": "node tools/build.mjs",
+    "verify": "node tools/build.mjs --verify",
+    "test:e2e": "node tools/build.mjs && playwright test",
+    "serve": "node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}

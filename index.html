@@ -1,0 +1,374 @@
+<!doctype html>
+<!--
+  MailAnalyzer: a zero-dependency, local-first email header analyzer.
+  https://github.com/RadMageIRL/mailanalyzer
+
+  Copyright (c) 2026 RadMageIRL. Released under the MIT License; see LICENSE.
+  Styling and interaction patterns derived from Kard, also by RadMageIRL.
+
+  SPDX-License-Identifier: MIT
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23101311'/%3E%3Crect x='3' y='3' width='58' height='58' rx='11' fill='none' stroke='%23364038' stroke-width='2'/%3E%3Cpath d='M15 46l12-14 10 8 13-20' fill='none' stroke='%238cd3a0' stroke-width='6' stroke-linecap='square' stroke-linejoin='miter'/%3E%3C/svg%3E">
+  <title>MailAnalyzer v1.0.0 - Email Header Analyzer for SPF, DKIM, DMARC &amp; Microsoft 365 | RadMage Labs</title>
+  <meta name="description" content="Free email header analyzer: SPF, DKIM, DMARC and alignment, Microsoft 365 filtering codes, mail routing delays and phishing indicators. Runs in your browser; nothing is uploaded.">
+  <link rel="canonical" href="https://radmagelabs.com/mailanalyzer/">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RadMage Labs">
+  <meta property="og:url" content="https://radmagelabs.com/mailanalyzer/">
+  <meta property="og:title" content="MailAnalyzer: Email Header Analyzer">
+  <meta property="og:description" content="Analyze email headers, authentication results, mail routing, Microsoft 365 filtering, and suspicious sender indicators directly in your browser.">
+  <meta property="og:image" content="https://radmagelabs.com/assets/og/mailanalyzer.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MailAnalyzer analyzing a sample vendor invoice: the verdict, findings, authentication results and the route">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"MailAnalyzer","url":"https://radmagelabs.com/mailanalyzer/","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","isAccessibleForFree":true,"softwareVersion":"1.0.0","description":"Local-first email header analyzer for SPF, DKIM, DMARC, Microsoft 365, mail routing, phishing indicators, and troubleshooting. Runs in the browser.","image":"https://radmagelabs.com/assets/og/mailanalyzer.png","screenshot":"https://radmagelabs.com/assets/og/mailanalyzer.png","license":"https://opensource.org/license/mit","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"RadMageIRL","url":"https://radmagelabs.com/"},"sameAs":"https://github.com/RadMageIRL/mailanalyzer"}</script>
+  <style>
+    :root {
+      --bg: #f5f4ef;
+      --surface: #fffefa;
+      --surface-raised: #ffffff;
+      --text: #1c201d;
+      --muted: #6b716c;
+      --border: #cbd0c9;
+      --accent: #2b6b4d;
+      --accent-ink: #ffffff;
+      --danger: #b83b31;
+      --shadow: 0 10px 24px rgba(30, 36, 31, .08);
+      --bad: #e66055;
+      --warn: #d6a545;
+      --good: #56a36e;
+      --info: #5d9ee7;
+    }
+    /* Dark tokens are declared twice on purpose: once for the system default (when no explicit
+       choice is stored) and once for an explicit [data-theme="dark"] so the toggle wins both ways. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #101311;
+        --surface: #181d19;
+        --surface-raised: #202620;
+        --text: #e4e9e2;
+        --muted: #98a198;
+        --border: #364038;
+        --accent: #8cd3a0;
+        --accent-ink: #102416;
+        --danger: #ff9488;
+        --shadow: 0 12px 28px rgba(0, 0, 0, .26);
+      }
+    }
+    [data-theme="dark"] {
+      --bg: #101311;
+      --surface: #181d19;
+      --surface-raised: #202620;
+      --text: #e4e9e2;
+      --muted: #98a198;
+      --border: #364038;
+      --accent: #8cd3a0;
+      --accent-ink: #102416;
+      --danger: #ff9488;
+      --shadow: 0 12px 28px rgba(0, 0, 0, .26);
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 14px;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    *::-webkit-scrollbar { width: 6px; height: 6px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    *::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .app { width: min(1400px, 100%); margin: 0 auto; padding: 26px clamp(16px, 3vw, 46px) 32px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; }
+    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    h1 { margin: 0; font-size: clamp(25px, 4vw, 38px); letter-spacing: -.11em; line-height: 1; }
+    h1::after { content: "_"; color: var(--accent); animation: blink 1.15s steps(1) infinite; }
+    .tagline { color: var(--muted); font-size: 11px; letter-spacing: .04em; white-space: nowrap; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; }
+    .button, .icon-button {
+      appearance: none; border: 1px solid var(--border); color: var(--text); background: transparent;
+      border-radius: 5px; padding: 8px 11px; line-height: 1; transition: background .15s, border-color .15s, color .15s, transform .15s;
+    }
+    .button:hover, .icon-button:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .button:active, .icon-button:active { transform: translateY(1px); }
+    .button[disabled] { opacity: .45; cursor: default; pointer-events: none; }
+    .button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .button.primary:hover { filter: brightness(1.06); color: var(--accent-ink); }
+    .button.danger { color: var(--danger); }
+    .button.danger:hover { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, transparent); }
+    .button.small { padding: 5px 8px; font-size: 11px; }
+    code { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 3px; padding: 1px 3px; }
+    .empty { color: var(--muted); font-size: 12px; text-align: center; margin: 25px 8px; }
+    .footer { margin-top: 18px; color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; gap: 14px; border-top: 1px solid var(--border); padding-top: 15px; }
+    .footer strong { color: var(--text); font-weight: 700; }
+    .shortcut { border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; color: var(--text); }
+    dialog { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0; width: min(540px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+    dialog.wide { width: min(980px, calc(100vw - 32px)); }
+    dialog::backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+    .modal-form { padding: 22px; }
+    .modal-heading { margin: 0 0 20px; font-size: 19px; letter-spacing: -.05em; }
+    label { display: block; margin-bottom: 16px; color: var(--muted); font-size: 12px; }
+    input, textarea, select { display: block; width: 100%; margin-top: 7px; padding: 9px 10px; border-radius: 4px; border: 1px solid var(--border); color: var(--text); background: var(--surface-raised); resize: vertical; }
+    textarea { min-height: 130px; line-height: 1.5; }
+    .modal-actions { margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+    .modal-actions .spacer { flex: 1; }
+    .about-copy { color: var(--muted); line-height: 1.6; margin: 0 0 18px; }
+    .about-copy strong { color: var(--text); }
+    .about-subhead { margin: 0 0 9px; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: .11em; }
+    .about-shortcuts { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+    .about-shortcuts td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .about-shortcuts td:last-child { color: var(--muted); text-align: right; }
+    .toast { position: fixed; z-index: 60; left: 50%; bottom: 22px; max-width: min(430px, calc(100vw - 28px)); text-align: center; line-height: 1.45; transform: translate(-50%, 16px); background: var(--text); color: var(--bg); padding: 9px 13px; border-radius: 4px; font-size: 12px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
+    .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+    .hint { color: var(--muted); font-size: 11px; margin: 0; line-height: 1.45; }
+    .panel { background: color-mix(in srgb, var(--surface) 88%, var(--bg)); border: 1px solid var(--border); border-radius: 7px; }
+    .drop-overlay { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg) 80%, transparent); border: 2px dashed var(--accent); color: var(--accent); font-size: 18px; letter-spacing: -.04em; pointer-events: none; }
+    .drop-overlay.visible { display: flex; }
+
+    /* --- input, sections, auth, route --- */
+    .input-panel { padding: 16px; margin-bottom: 18px; }
+    .input-panel textarea { margin: 0 0 12px; min-height: 240px; font-size: 12px; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+    .input-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .input-actions .spacer { flex: 1; }
+    .collapsed-input { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 18px; color: var(--muted); font-size: 12px; }
+    .collapsed-input span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .recent { list-style: none; margin: 0; padding: 0; }
+    .recent-inline { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .recent-item { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+    .recent-item:last-child { border-bottom: 0; }
+    .recent-open { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 8px 6px; border: 0; border-radius: 4px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .recent-open:hover, .recent-open:focus-visible { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+    .recent-subject, .recent-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .recent-subject { font-size: 12px; }
+    .recent-meta { color: var(--muted); font-size: 11px; }
+    #recent-list { max-height: min(60vh, 520px); overflow-y: auto; }
+    [hidden] { display: none !important; }
+    .verdict { display: flex; align-items: center; gap: 14px; padding: 16px 18px; margin-bottom: 18px; border-left: 4px solid var(--muted); }
+    .verdict.bad { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 7%, var(--surface)); }
+    .verdict.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+    .verdict.good { border-left-color: var(--good); background: color-mix(in srgb, var(--good) 7%, var(--surface)); }
+    .verdict h2 { margin: 0; font-size: 20px; letter-spacing: -.06em; }
+    .verdict p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .verdict h2 .basis { margin-left: 8px; vertical-align: middle; }
+    .verdict p.because { line-height: 1.7; }
+    .verdict .grow { flex: 1; min-width: 0; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .section { padding: 16px 18px; margin-bottom: 16px; min-width: 0; }
+    .grid-2 .section { margin-bottom: 0; }
+    .section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0 0 14px; }
+    .section-head h3 { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .11em; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 11px; flex: 1; }
+    .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 16px; margin: 0; font-size: 12px; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; overflow-wrap: anywhere; }
+    .dim { color: var(--muted); }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .pill { display: inline-flex; align-items: baseline; gap: 7px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 99px; font-size: 12px; }
+    .pill b { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+    .pill.good { border-color: var(--good); color: var(--good); background: color-mix(in srgb, var(--good) 8%, transparent); }
+    .pill.bad { border-color: var(--bad); color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, transparent); }
+    .pill.warn { border-color: var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); }
+    .pill.none { color: var(--muted); }
+    .tag { display: inline-block; padding: 1px 7px; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); font-size: 10px; line-height: 1.5; white-space: nowrap; }
+    .tag.sys { color: var(--sys, var(--accent)); border-color: color-mix(in srgb, var(--sys, var(--accent)) 60%, var(--border)); }
+    .tag.good { color: var(--good); border-color: var(--good); } .tag.bad { color: var(--bad); border-color: var(--bad); } .tag.warn { color: var(--warn); border-color: var(--warn); } .tag.info { color: var(--info); border-color: var(--info); }
+    .basis { display: inline-block; padding: 0 6px; border: 1px solid var(--border); border-radius: 99px; font-size: 9px; font-weight: 400; letter-spacing: .08em; line-height: 1.6; text-transform: uppercase; white-space: nowrap; vertical-align: 1px; }
+    .basis-reported { color: var(--info); border-color: color-mix(in srgb, var(--info) 70%, var(--border)); }
+    .basis-observed { color: var(--text); }
+    .basis-inferred { color: var(--muted); border-style: dashed; }
+    .basis-untrusted { color: var(--bad); border-color: var(--bad); }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .table th { text-align: left; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; padding: 0 8px 7px 0; border-bottom: 1px solid var(--border); }
+    .table td { padding: 7px 8px 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); vertical-align: top; overflow-wrap: anywhere; }
+    .table td.nowrap { white-space: nowrap; }
+    .table td.code { white-space: nowrap; width: 1%; }
+    .table.decode { table-layout: fixed; margin-bottom: 16px; }
+    .table.decode col.k { width: 150px; }
+    .table.decode col.v { width: 34%; }
+    .table.decode td.val { font-family: inherit; overflow-wrap: anywhere; word-break: break-word; }
+    @media (max-width: 640px) { .table.decode col.k { width: 110px; } .table.decode col.v { width: 45%; } }
+    .finding { display: flex; gap: 12px; align-items: baseline; margin-bottom: 7px; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 4px; background: var(--surface-raised); }
+    .finding.bad { border-left-color: var(--bad); } .finding.warn { border-left-color: var(--warn); } .finding.good { border-left-color: var(--good); } .finding.info { border-left-color: var(--info); }
+    .finding .sev { flex: 0 0 52px; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+    .finding.bad .sev { color: var(--bad); } .finding.warn .sev { color: var(--warn); } .finding.good .sev { color: var(--good); } .finding.info .sev { color: var(--info); }
+    .finding .body { flex: 1; min-width: 0; }
+    .finding strong { font-size: 13px; }
+    .finding span.detail { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+    .mech { margin-bottom: 10px; padding: 11px 13px; border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 4px; background: var(--surface-raised); }
+    .mech.good { border-left-color: var(--good); } .mech.bad { border-left-color: var(--bad); } .mech.warn { border-left-color: var(--warn); }
+    .mech-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 9px; }
+    .mech-head h4 { margin: 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+    .mech-head .pill { padding: 2px 8px; font-size: 11px; }
+    .mech .kv { gap: 5px 14px; font-size: 11.5px; }
+    .mech .kv dd { line-height: 1.5; }
+    .hops { position: relative; }
+    .hop { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr) 170px; gap: 14px; padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+    .hop:last-child { border-bottom: 0; }
+    .hop.outside { opacity: .82; }
+    .hop.boundary { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--good) 55%, transparent); }
+    .hop-n { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--accent); border-radius: 99px; color: var(--accent); font-size: 12px; font-weight: 700; }
+    .hop.outside .hop-n { border-style: dashed; border-color: var(--muted); color: var(--muted); }
+    .hop-route { font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+    .hop-route .arrow { color: var(--muted); padding: 0 6px; }
+    .hop-route .host { font-weight: 700; }
+    .hop-meta { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 11px; }
+    .hop-time { text-align: right; font-size: 11px; color: var(--muted); }
+    .hop-time .delay { display: block; margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .delay.slow { color: var(--warn) !important; } .delay.very-slow { color: var(--bad) !important; } .delay.skew { color: var(--info) !important; }
+    .delay-bar { height: 3px; margin-top: 6px; border-radius: 99px; background: var(--border); overflow: hidden; }
+    .delay-bar span { display: block; height: 100%; background: var(--accent); }
+    .delay-bar span.slow { background: var(--warn); } .delay-bar span.very-slow { background: var(--bad); }
+    .hop details, .section details { margin-top: 6px; font-size: 11px; color: var(--muted); }
+    .hop details summary, .section details summary { cursor: pointer; width: max-content; }
+    .hop details summary:hover, .section details summary:hover { color: var(--accent); }
+    .hop pre, .raw { margin: 6px 0 0; padding: 9px 10px; white-space: pre-wrap; overflow-wrap: anywhere; background: color-mix(in srgb, var(--bg) 72%, var(--surface-raised)); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; line-height: 1.5; color: var(--text); }
+    .sub-head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 12px; }
+    .sub-head .grow { flex: 1; }
+    .header-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .header-tools input { margin: 0; max-width: 340px; }
+    .h-name { white-space: nowrap; color: var(--accent); width: 1%; }
+    .h-name.known { font-weight: 700; }
+    tr.untrusted td { background: color-mix(in srgb, var(--bad) 5%, transparent); }
+    mark { background: color-mix(in srgb, var(--warn) 38%, transparent); color: inherit; border-radius: 2px; }
+    .report-options { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: -6px 0 14px; }
+    .check { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--text); font-size: 12px; cursor: pointer; }
+    .check input { width: auto; margin: 0; display: inline-block; accent-color: var(--accent); }
+    #report-preview { max-height: 52vh; overflow: auto; margin: 0; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+      h1::after { animation: none; }
+    }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 700px) {
+      .app { padding-top: 18px; } .topbar { align-items: flex-start; flex-direction: column; } .toolbar { justify-content: flex-start; }
+      .brand { flex-wrap: wrap; row-gap: 6px; } .tagline { white-space: normal; }
+      .h-name { white-space: normal; overflow-wrap: anywhere; width: 40%; }
+      .hop { grid-template-columns: 30px minmax(0, 1fr); } .hop-time { grid-column: 2; text-align: left; }
+      .footer { display: block; line-height: 1.8; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><h1>MailAnalyzer</h1><span class="tagline">email header analyzer / nothing leaves this browser</span></div>
+      <nav class="toolbar" aria-label="Analyzer controls">
+        <button class="button" id="open-button" type="button">Open file</button>
+        <button class="button" id="recent-button" type="button">Recent</button>
+        <button class="button" id="sample-button" type="button">Sample</button>
+        <button class="button" id="report-button" type="button" disabled>Report</button>
+        <button class="button" id="theme-toggle" type="button" aria-label="Switch color theme">Theme</button>
+        <input id="file-input" type="file" accept=".eml,.msg,.txt,message/rfc822,application/vnd.ms-outlook,text/plain" hidden>
+      </nav>
+    </header>
+
+    <section id="input-panel" class="input-panel panel">
+      <textarea id="headers-input" spellcheck="false" autocomplete="off" aria-label="Raw message headers" placeholder="Paste raw message headers here…&#10;&#10;Outlook desktop: open the message → File → Properties → Internet headers.&#10;Outlook on the web: … → View → View message source.&#10;Gmail: ⋮ → Show original.&#10;&#10;A whole .eml or Outlook .msg works too (Open file, or drop it here); only the headers are read."></textarea>
+      <div class="input-actions">
+        <button class="button primary" id="analyze-button" type="button">Analyze</button>
+        <button class="button" id="clear-button" type="button">Clear</button>
+        <span class="spacer"></span>
+        <span class="hint"><kbd class="shortcut">ctrl</kbd>+<kbd class="shortcut">enter</kbd> analyze · pasting analyzes automatically</span>
+      </div>
+      <div id="recent-panel" class="recent-inline" hidden>
+        <div class="sub-head"><strong>recent</strong><span class="grow"></span><button class="button small" id="recent-all" type="button">All recent…</button></div>
+        <ul id="recent-inline" class="recent"></ul>
+      </div>
+    </section>
+    <div id="collapsed-input" class="collapsed-input panel" hidden><span id="collapsed-summary"></span><button class="button small" id="refresh-button" type="button" title="Run the analysis again (F5 keeps the message too)">Refresh</button><button class="button small" id="edit-button" type="button">Edit headers</button><button class="button small" id="new-button" type="button">New</button></div>
+
+    <div id="results" hidden>
+      <section id="verdict" class="verdict panel"></section>
+      <section class="section panel">
+        <div class="section-head"><h3>findings</h3><p>what stands out, worst first</p></div>
+        <div id="findings"></div>
+        <div class="legend"><span><span class="basis basis-reported">reported</span> a verdict a mail server wrote into a header; MailAnalyzer repeats it</span><span><span class="basis basis-observed">observed</span> read directly from header values, which the sender may control</span><span><span class="basis basis-inferred">inferred</span> worked out by MailAnalyzer; a heuristic, not a verification</span></div>
+      </section>
+      <div class="grid-2">
+        <section class="section panel"><div class="section-head"><h3>message</h3><p>who it claims to be from</p></div><dl id="summary" class="kv"></dl></section>
+        <section class="section panel"><div class="section-head"><h3>authentication</h3><p id="auth-source">spf · dkim · dmarc · alignment</p></div><div id="auth"></div></section>
+      </div>
+      <section id="m365-section" class="section panel"><div class="section-head"><h3>microsoft 365</h3><p>Exchange Online Protection stamps, decoded</p></div><div id="m365"></div></section>
+      <section class="section panel"><div class="section-head"><h3>route</h3><p id="route-sub">received hops, oldest first</p></div><div id="route" class="hops"></div></section>
+      <section id="filters-section" class="section panel"><div class="section-head"><h3>other gateways</h3><p>verdicts stamped by Mailgun and spam filters</p></div><div id="filters"></div></section>
+      <section class="section panel">
+        <div class="section-head"><h3>original headers</h3><p id="header-count"></p></div>
+        <div class="header-tools"><input id="header-filter" type="search" placeholder="filter headers" autocomplete="off" aria-label="Filter headers"><button class="button small" id="raw-copy" type="button">Copy original</button><button class="button small" id="raw-download" type="button">Download original</button></div>
+        <table class="table"><tbody id="header-table"></tbody></table>
+      </section>
+    </div>
+
+    <footer class="footer"><span><strong>MailAnalyzer</strong> <span id="version">v1.0.0</span> · local-first header analysis, nothing is uploaded · <button class="button small" id="about-button" type="button">About</button></span><span><kbd class="shortcut">ctrl</kbd>+<kbd class="shortcut">enter</kbd> analyze · <kbd class="shortcut">r</kbd> report · <kbd class="shortcut">R</kbd> refresh · <kbd class="shortcut">e</kbd> edit · <kbd class="shortcut">/</kbd> filter headers · <kbd class="shortcut">o</kbd> open file · <kbd class="shortcut">h</kbd> recent · <kbd class="shortcut">esc</kbd> clear filter</span></footer>
+  </main>
+
+  <dialog id="report-dialog" class="wide" aria-labelledby="report-title">
+    <section class="modal-form">
+      <h2 class="modal-heading" id="report-title">Troubleshooting report</h2>
+      <div class="report-options">
+        <label class="check"><input type="checkbox" id="opt-redact" checked> mask mailbox names (j***@domain)</label>
+        <label class="check"><input type="checkbox" id="opt-subject"> hide subject</label>
+        <label class="check"><input type="checkbox" id="opt-notes" checked> include notes and ok items</label>
+        <label class="check"><input type="checkbox" id="opt-raw"> append original headers</label>
+      </div>
+      <pre id="report-preview" class="raw"></pre>
+      <p class="hint" style="margin-top:10px"><strong>Masking is partial, not anonymization.</strong> It hides the mailbox part of addresses (j***@example.com) and nothing else: display names, domains, host names, IP addresses, the subject (unless hidden) and encoded values such as tracking IDs stay as they are. Message-ID and Network-Message-Id are never masked; they are what Message trace and Threat Explorer search on. Read the report before you share it.</p>
+      <div class="modal-actions">
+        <button class="button primary" id="report-copy" type="button">Copy report</button>
+        <button class="button" id="report-download" type="button">Download .txt</button>
+        <span class="spacer"></span>
+        <button class="button" id="report-close" type="button">Close</button>
+      </div>
+    </section>
+  </dialog>
+  <dialog id="recent-dialog" aria-labelledby="recent-title">
+    <section class="modal-form">
+      <h2 class="modal-heading" id="recent-title">Recent</h2>
+      <ul id="recent-list" class="recent"></ul>
+      <p class="hint" style="margin-top:12px">The last 25 header blocks you opened or pasted, kept in this browser's local storage until you remove them. Only the headers are kept: a message body pasted along with them, and attachments, never are. Nothing is uploaded. The message open in this tab stays until you press New or close the tab.</p>
+      <div class="modal-actions"><button class="button danger" id="recent-clear" type="button">Clear all</button><span class="spacer"></span><button class="button primary" id="recent-close" type="button">Close</button></div>
+    </section>
+  </dialog>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <section class="modal-form">
+      <h2 class="modal-heading" id="about-title">MailAnalyzer_</h2>
+      <p class="about-copy"><strong>A zero-dependency, local-first email header analyzer.</strong> Headers are parsed by this page in your browser. Nothing is uploaded or looked up in DNS. This browser remembers the theme, the report options, your domains and the <strong>recent</strong> list (header blocks only; remove items or clear it from the Recent dialog). Outlook <code>.msg</code> files are read here too: MailAnalyzer takes out only the stored internet headers. Raw headers and message IDs can identify people and systems, so treat what you paste like the message itself.</p>
+      <h3 class="about-subhead">what MailAnalyzer does not do</h3>
+      <p class="about-copy">It does <strong>not</strong> verify signatures, query SPF/DMARC records, or check IP reputation. Every verdict comes from a header a mail server wrote, and is labeled <strong>reported</strong>. Headers that were already present when the message reached your systems could have been written by the sender, so MailAnalyzer flags verdict headers found there as <strong>untrusted</strong>. That trust boundary is <strong>inferred</strong>: it is the newest hop received by Exchange Online's inbound front door (<code>*.mail.protection.outlook.com</code>) or a host on <strong>your domains</strong> (below), and only when every newer hop is Microsoft 365 or yours. Without one, every verdict is shown as a claim. Microsoft's own <code>X-MS-Exchange-*</code> / <code>X-Forefront-*</code> stamps are judged by name instead, because Exchange appends them at the bottom and renames copies that arrive from outside to <code>…-Untrusted</code>.</p>
+      <h3 class="about-subhead">what it reads</h3>
+      <p class="about-copy">The <strong>Received</strong> chain, <strong>Authentication-Results</strong> / ARC / <strong>Received-SPF</strong> / <strong>DKIM-Signature</strong>, Microsoft 365 <strong>X-Forefront-Antispam-Report</strong> (SFV, SCL, CAT, IPV, SFTY, SRV, CIP, CTRY…), <strong>X-Microsoft-Antispam</strong> (BCL, PCL), composite authentication reason codes, <strong>X-MS-Exchange-Organization-*</strong> stamps, the <strong>Network-Message-Id</strong> and <strong>X-Microsoft-Antispam-Mailbox-Delivery</strong>, plus <strong>X-Mailgun-*</strong>, SpamAssassin / rspamd / virus scanner stamps (<strong>X-Spam-*</strong>, <strong>X-Spamd-Result</strong>, <strong>X-Rspamd-Action</strong>, <strong>X-Virus-Status</strong>), <strong>X-Proofpoint-*</strong>, <strong>X-Mimecast-*</strong>, and the list and automation headers (<strong>List-Unsubscribe</strong>, <strong>List-Id</strong>, <strong>Precedence</strong>, <strong>Auto-Submitted</strong>).</p>
+      <h3 class="about-subhead">categories</h3>
+      <p class="about-copy">The headline names the most serious category any finding supports: malware, phishing, impersonation, spam, bulk or automated. A verdict a filter wrote (Microsoft 365, SpamAssassin, rspamd, a virus scanner) makes it <strong>reported</strong>. Otherwise it is MailAnalyzer's own reading of the headers, marked <strong>inferred</strong> and worded <em>likely</em> or <em>possible</em>: lookalike and international domains, brand names in the sender name, free webmail used for business roles or replies, repeated headers and hidden characters. Lookalikes are checked against <strong>your domains</strong> and a short list of commonly impersonated brands, with no lookups.</p>
+      <h3 class="about-subhead" id="domains-title">your domains</h3>
+      <input id="domains-input" type="text" spellcheck="false" autocomplete="off" placeholder="example.com, mail*" aria-labelledby="domains-title" aria-describedby="domains-help">
+      <p class="hint" id="domains-help" style="margin:7px 0 18px">Your organization's mail domains and server names, separated by commas. A host on one of them, or on a subdomain, counts as your own server when MailAnalyzer looks for where a message entered your systems; Exchange Online is recognized without this. <code>*</code> matches any characters, for server names like <code>mail*</code>. Saved in this browser only.</p>
+      <h3 class="about-subhead">keys</h3>
+      <table class="about-shortcuts"><tbody><tr><td><kbd class="shortcut">ctrl</kbd>+<kbd class="shortcut">enter</kbd></td><td>analyze</td></tr><tr><td><kbd class="shortcut">r</kbd></td><td>troubleshooting report</td></tr><tr><td><kbd class="shortcut">shift</kbd>+<kbd class="shortcut">r</kbd></td><td>refresh the analysis</td></tr><tr><td><kbd class="shortcut">e</kbd></td><td>edit headers</td></tr><tr><td><kbd class="shortcut">/</kbd></td><td>filter original headers</td></tr><tr><td><kbd class="shortcut">o</kbd></td><td>open an .eml or .msg</td></tr><tr><td><kbd class="shortcut">h</kbd></td><td>recent messages</td></tr><tr><td><kbd class="shortcut">esc</kbd></td><td>clear header filter</td></tr></tbody></table>
+      <p class="about-copy">MailAnalyzer v1.0.0. License: <strong>MIT</strong>. Source and releases: <code>github.com/RadMageIRL/mailanalyzer</code>. Styling derived from Kard, also by RadMageIRL.</p>
+      <div class="modal-actions"><span class="spacer"></span><button id="about-close" class="button primary" type="button">Close</button></div>
+    </section>
+  </dialog>
+  <div id="drop-overlay" class="drop-overlay">drop .eml or .msg to analyze_</div>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script src="mailanalyzer-core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
