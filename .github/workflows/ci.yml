@@ -1,52 +1,18 @@
-# Tests every push and pull request. On a push to main, deploys the site to GitHub Pages after every test passes;
-# radmagelabs.com/mailanalyzer/ proxies that copy. Needs the repository's Pages source set to "GitHub Actions".
+# Deploys the site to GitHub Pages on every push to main; radmagelabs.com/mailanalyzer/ proxies that copy. The tests
+# run locally before a push (README, Development), not here. Needs the repository's Pages source set to
+# "GitHub Actions".
 name: ci
 
 on:
   push:
-  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  unit:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        node: [22, 24]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: ${{ matrix.node }}
-      - name: Unit tests and release checks
-        run: node --test "tests/*.test.js"
-      - name: Reproducible build and release zip
-        run: node tools/build.mjs --verify
-
-  browser:
-    needs: unit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - name: Install Chromium, Firefox and WebKit
-        run: npx playwright install --with-deps chromium firefox webkit
-      - name: Browser tests
-        run: npm run test:e2e
-        env:
-          CI: 'true'
-
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [unit, browser]
     runs-on: ubuntu-latest
     permissions:
       contents: read

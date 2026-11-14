@@ -69,7 +69,7 @@ To report a security problem, open a [GitHub issue](https://github.com/RadMageIR
 
 ## Browser support
 
-The release was tested with the browser suite in this repository on Windows in Google Chrome 157 (Chromium), Firefox 157 and WebKit 27.2 (Playwright's builds of the Safari engine), at widths from 320 to 1440 pixels and with touch emulation in Chromium and WebKit, both served from a web server and opened from disk. CI runs the same suite on Linux in Playwright's Chromium, Firefox and WebKit. Real Safari on macOS or iOS was not tested.
+The release was tested with the browser suite in this repository on Windows in Google Chrome 157 (Chromium), Firefox 157 and WebKit 27.2 (Playwright's builds of the Safari engine), at widths from 320 to 1440 pixels and with touch emulation in Chromium and WebKit, both served from a web server and opened from disk. Real Safari on macOS or iOS was not tested.
 
 ## Run it locally
 
