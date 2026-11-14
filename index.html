@@ -16,21 +16,21 @@
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="dark light">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23101311'/%3E%3Crect x='3' y='3' width='58' height='58' rx='11' fill='none' stroke='%23364038' stroke-width='2'/%3E%3Cpath d='M15 46l12-14 10 8 13-20' fill='none' stroke='%238cd3a0' stroke-width='6' stroke-linecap='square' stroke-linejoin='miter'/%3E%3C/svg%3E">
-  <title>MailAnalyzer v1.0.0 - Email Header Analyzer for SPF, DKIM, DMARC &amp; Microsoft 365 | RadMage Labs</title>
-  <meta name="description" content="Free email header analyzer: SPF, DKIM, DMARC and alignment, Microsoft 365 filtering codes, mail routing delays and phishing indicators. Runs in your browser; nothing is uploaded.">
+  <title>MailAnalyzer | Email Header Analyzer | RadMage Labs</title>
+  <meta name="description" content="Analyze email headers, SPF, DKIM, DMARC, Microsoft 365 filtering, and delivery routes privately in your browser. Free and open source.">
   <link rel="canonical" href="https://radmagelabs.com/mailanalyzer/">
   <meta name="robots" content="index,follow">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RadMage Labs">
   <meta property="og:url" content="https://radmagelabs.com/mailanalyzer/">
   <meta property="og:title" content="MailAnalyzer: Email Header Analyzer">
-  <meta property="og:description" content="Analyze email headers, authentication results, mail routing, Microsoft 365 filtering, and suspicious sender indicators directly in your browser.">
+  <meta property="og:description" content="Analyze email headers, SPF, DKIM, DMARC, Microsoft 365 filtering, and delivery routes privately in your browser. Free and open source.">
   <meta property="og:image" content="https://radmagelabs.com/assets/og/mailanalyzer.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="MailAnalyzer analyzing a sample vendor invoice: the verdict, findings, authentication results and the route">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"MailAnalyzer","url":"https://radmagelabs.com/mailanalyzer/","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","isAccessibleForFree":true,"softwareVersion":"1.0.0","description":"Local-first email header analyzer for SPF, DKIM, DMARC, Microsoft 365, mail routing, phishing indicators, and troubleshooting. Runs in the browser.","image":"https://radmagelabs.com/assets/og/mailanalyzer.png","screenshot":"https://radmagelabs.com/assets/og/mailanalyzer.png","license":"https://opensource.org/license/mit","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"RadMageIRL","url":"https://radmagelabs.com/"},"sameAs":"https://github.com/RadMageIRL/mailanalyzer"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"MailAnalyzer","url":"https://radmagelabs.com/mailanalyzer/","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","isAccessibleForFree":true,"softwareVersion":"1.0.1","description":"Analyze email headers, SPF, DKIM, DMARC, Microsoft 365 filtering, and delivery routes privately in your browser. Free and open source.","image":"https://radmagelabs.com/assets/og/mailanalyzer.png","screenshot":"https://radmagelabs.com/assets/og/mailanalyzer.png","license":"https://opensource.org/license/mit","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"RadMageIRL","url":"https://radmagelabs.com/"},"sameAs":"https://github.com/RadMageIRL/mailanalyzer"}</script>
   <style>
     :root {
       --bg: #f5f4ef;
@@ -88,13 +88,19 @@
     }
     button, input, textarea, select { font: inherit; }
     button { cursor: pointer; }
-    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
     * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
     *::-webkit-scrollbar { width: 6px; height: 6px; }
     *::-webkit-scrollbar-track { background: transparent; }
     *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
     *::-webkit-scrollbar-thumb:hover { background: var(--muted); }
     .app { width: min(1400px, 100%); margin: 0 auto; padding: 26px clamp(16px, 3vw, 46px) 32px; }
+    /* Back to RadMage Labs sits above the title, so the toolbar keeps the rows it had on every width. The padding
+       makes it a 26px tall target; the negative margin keeps the title where it was. */
+    .labs-nav { margin: -7px 0 7px; }
+    .labs-link { display: inline-block; padding: 5px 0; color: var(--muted); font-size: 12px; line-height: 16px; text-decoration: none; }
+    .labs-link .arrow { color: var(--accent); }
+    .labs-link:hover, .labs-link:focus-visible { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; }
     .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
     h1 { margin: 0; font-size: clamp(25px, 4vw, 38px); letter-spacing: -.11em; line-height: 1; }
@@ -268,6 +274,7 @@
 </head>
 <body>
   <main class="app">
+    <nav class="labs-nav" aria-label="RadMage Labs"><a class="labs-link" href="https://radmagelabs.com/"><span class="arrow" aria-hidden="true">&larr;</span> Back to RadMage Labs</a></nav>
     <header class="topbar">
       <div class="brand"><h1>MailAnalyzer</h1><span class="tagline">email header analyzer / nothing leaves this browser</span></div>
       <nav class="toolbar" aria-label="Analyzer controls">
@@ -275,6 +282,7 @@
         <button class="button" id="recent-button" type="button">Recent</button>
         <button class="button" id="sample-button" type="button">Sample</button>
         <button class="button" id="report-button" type="button" disabled>Report</button>
+        <button class="button" id="share-button" type="button" title="Share https://radmagelabs.com/mailanalyzer/">Share</button>
         <button class="button" id="theme-toggle" type="button" aria-label="Switch color theme">Theme</button>
         <input id="file-input" type="file" accept=".eml,.msg,.txt,message/rfc822,application/vnd.ms-outlook,text/plain" hidden>
       </nav>
@@ -316,7 +324,7 @@
       </section>
     </div>
 
-    <footer class="footer"><span><strong>MailAnalyzer</strong> <span id="version">v1.0.0</span> · local-first header analysis, nothing is uploaded · <button class="button small" id="about-button" type="button">About</button></span><span><kbd class="shortcut">ctrl</kbd>+<kbd class="shortcut">enter</kbd> analyze · <kbd class="shortcut">r</kbd> report · <kbd class="shortcut">R</kbd> refresh · <kbd class="shortcut">e</kbd> edit · <kbd class="shortcut">/</kbd> filter headers · <kbd class="shortcut">o</kbd> open file · <kbd class="shortcut">h</kbd> recent · <kbd class="shortcut">esc</kbd> clear filter</span></footer>
+    <footer class="footer"><span><strong>MailAnalyzer</strong> <span id="version">v1.0.1</span> · local-first header analysis, nothing is uploaded · <button class="button small" id="about-button" type="button">About</button></span><span><kbd class="shortcut">ctrl</kbd>+<kbd class="shortcut">enter</kbd> analyze · <kbd class="shortcut">r</kbd> report · <kbd class="shortcut">R</kbd> refresh · <kbd class="shortcut">e</kbd> edit · <kbd class="shortcut">/</kbd> filter headers · <kbd class="shortcut">o</kbd> open file · <kbd class="shortcut">h</kbd> recent · <kbd class="shortcut">esc</kbd> clear filter</span></footer>
   </main>
 
   <dialog id="report-dialog" class="wide" aria-labelledby="report-title">
@@ -361,7 +369,7 @@
       <p class="hint" id="domains-help" style="margin:7px 0 18px">Your organization's mail domains and server names, separated by commas. A host on one of them, or on a subdomain, counts as your own server when MailAnalyzer looks for where a message entered your systems; Exchange Online is recognized without this. <code>*</code> matches any characters, for server names like <code>mail*</code>. Saved in this browser only.</p>
       <h3 class="about-subhead">keys</h3>
       <table class="about-shortcuts"><tbody><tr><td><kbd class="shortcut">ctrl</kbd>+<kbd class="shortcut">enter</kbd></td><td>analyze</td></tr><tr><td><kbd class="shortcut">r</kbd></td><td>troubleshooting report</td></tr><tr><td><kbd class="shortcut">shift</kbd>+<kbd class="shortcut">r</kbd></td><td>refresh the analysis</td></tr><tr><td><kbd class="shortcut">e</kbd></td><td>edit headers</td></tr><tr><td><kbd class="shortcut">/</kbd></td><td>filter original headers</td></tr><tr><td><kbd class="shortcut">o</kbd></td><td>open an .eml or .msg</td></tr><tr><td><kbd class="shortcut">h</kbd></td><td>recent messages</td></tr><tr><td><kbd class="shortcut">esc</kbd></td><td>clear header filter</td></tr></tbody></table>
-      <p class="about-copy">MailAnalyzer v1.0.0. License: <strong>MIT</strong>. Source and releases: <code>github.com/RadMageIRL/mailanalyzer</code>. Styling derived from Kard, also by RadMageIRL.</p>
+      <p class="about-copy">MailAnalyzer v1.0.1. License: <strong>MIT</strong>. Source and releases: <code>github.com/RadMageIRL/mailanalyzer</code>. Styling derived from Kard, also by RadMageIRL.</p>
       <div class="modal-actions"><span class="spacer"></span><button id="about-close" class="button primary" type="button">Close</button></div>
     </section>
   </dialog>

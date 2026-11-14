@@ -1,5 +1,5 @@
 /*
-  MailAnalyzer page: input, rendering, the report dialog, recent history, theme and shortcuts.
+  MailAnalyzer page: input, rendering, the report dialog, recent history, sharing, theme and shortcuts.
   The analysis itself is in mailanalyzer-core.js. Nothing here touches the network.
 
   Copyright (c) 2026 RadMageIRL. Released under the MIT License; see LICENSE.
@@ -28,6 +28,36 @@
   function download(name, text) { const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); }
   function copy(text, what) { if (!navigator.clipboard) { flash('Clipboard not available here; use Download instead'); return; } navigator.clipboard.writeText(text).then(() => flash(what), () => flash('Clipboard blocked; use Download instead')); }
   function stamp() { return fmtTime(Date.now()).replace(/[-: ]/g, '').slice(0, 12); }
+
+  // ---------- share ----------
+  // Share always passes the public page address (C.SHARE), wherever the page was opened: radmagelabs.com, GitHub
+  // Pages or a file on disk. It never reads the address bar, the message or anything stored. The device's share sheet
+  // when there is one; otherwise, or if it fails, the link is copied. Closing the sheet does nothing.
+  function legacyCopy(text) {
+    // for pages where the async clipboard is missing (served over plain http): select a hidden field and copy it
+    const field = document.createElement('textarea'), back = document.activeElement;
+    field.value = text; field.setAttribute('readonly', ''); field.setAttribute('aria-hidden', 'true');
+    field.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(field); field.focus({ preventScroll: true }); field.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    field.remove();
+    if (back && typeof back.focus === 'function') back.focus();
+    return ok;
+  }
+  function copyLink(url) {
+    const done = () => flash(`Link copied: ${url}`);
+    const fallback = () => { if (legacyCopy(url)) done(); else flash(`Clipboard blocked; the link is ${url}`, 8000); };
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') { fallback(); return; }
+    navigator.clipboard.writeText(url).then(done, fallback);
+  }
+  async function sharePage() {
+    const data = { title: C.SHARE.title, text: C.SHARE.text, url: C.SHARE.url };
+    if (typeof navigator.share === 'function' && (typeof navigator.canShare !== 'function' || navigator.canShare(data))) {
+      try { await navigator.share(data); flash('Link shared'); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    copyLink(data.url);
+  }
   function applyTheme(mode) {
     if (mode === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = mode;
     const button = $('theme-toggle');
@@ -270,6 +300,7 @@
   $('open-button').addEventListener('click', () => $('file-input').click());
   $('file-input').addEventListener('change', event => { loadFile(event.target.files[0]); event.target.value = ''; });
   $('report-button').addEventListener('click', openReport);
+  $('share-button').addEventListener('click', sharePage);
   const openRecentDialog = () => { renderRecent(); $('recent-dialog').showModal(); };
   $('recent-button').addEventListener('click', openRecentDialog);
   $('recent-all').addEventListener('click', openRecentDialog);

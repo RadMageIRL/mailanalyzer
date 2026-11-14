@@ -28,7 +28,6 @@ const files = projectFiles().filter(f => TEXT.test(f.split('/').pop()) && !/^pac
 test('the version is the same everywhere it appears', () => {
   const pkg = JSON.parse(file('package.json'));
   assert.equal(pkg.version, V);
-  assert.ok(html.includes(`<title>MailAnalyzer v${V} - `), 'title');
   assert.ok(html.includes(`"softwareVersion":"${V}"`), 'JSON-LD');
   assert.ok(html.includes(`<span id="version">v${V}</span>`), 'footer');
   assert.ok(html.includes(`MailAnalyzer v${V}. License`), 'About');
@@ -43,7 +42,9 @@ test('the page has a strict Content Security Policy and loads only its own two s
   const scripts = [...html.matchAll(/<script\b([^>]*)>/g)].map(m => m[1].trim());
   assert.deepEqual(scripts, ['type="application/ld+json"', 'src="mailanalyzer-core.js"', 'src="app.js"']);
   assert.ok(!/\son[a-z]+\s*=/i.test(html.replace(/<script type="application\/ld\+json">[^<]*<\/script>/, '')), 'inline event handler');
-  assert.ok(!/(src|href)="(https?:)?\/\//i.test(html.replace(/<link rel="canonical"[^>]*>/, '')), 'no outside resources');
+  // The only outside addresses are the canonical link and the plain Back to RadMage Labs link; nothing is loaded.
+  const outside = [...html.matchAll(/<(\w+)\b[^>]*?\s(src|href)="((?:https?:)?\/\/[^"]*)"/gi)].map(m => `<${m[1]} ${m[2]}="${m[3]}">`);
+  assert.deepEqual(outside, ['<link href="https://radmagelabs.com/mailanalyzer/">', '<a href="https://radmagelabs.com/">'], 'no outside resources');
   assert.match(html, /<meta name="referrer" content="no-referrer">/);
 });
 
@@ -110,6 +111,58 @@ test('the README documents the essentials', () => {
   assert.ok(md.includes('https://radmagelabs.com/mailanalyzer/'));
   assert.match(md, /!\[[^\]]+\]\(screenshots\/mailanalyzer\.png\)/);
   assert.ok(existsSync(join(ROOT, 'screenshots', 'mailanalyzer.png')));
+});
+
+const decode = s => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const metas = key => [...html.matchAll(/<meta (?:name|property)="([^"]+)" content="([^"]*)">/g)].filter(m => m[1] === key).map(m => decode(m[2]));
+const one = key => { const all = metas(key); assert.equal(all.length, 1, `${key}: ${all.length} tags`); return all[0]; };
+const DESCRIPTION = 'Analyze email headers, SPF, DKIM, DMARC, Microsoft 365 filtering, and delivery routes privately in your browser. Free and open source.';
+
+test('search metadata: a short title, one description used everywhere, and one canonical address', () => {
+  const titles = [...html.matchAll(/<title>([^<]*)<\/title>/g)].map(m => decode(m[1]));
+  assert.deepEqual(titles, ['MailAnalyzer | Email Header Analyzer | RadMage Labs']);
+  assert.ok(titles[0].length <= 60, `title is ${titles[0].length} characters`);
+  const desc = one('description');
+  assert.equal(desc, DESCRIPTION);
+  assert.ok(desc.length >= 70 && desc.length <= 160, `description is ${desc.length} characters`);
+  assert.equal(one('og:description'), desc, 'og:description');
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([^<]*)<\/script>/g)];
+  assert.equal(blocks.length, 1);
+  const ld = JSON.parse(blocks[0][1]);
+  assert.equal(ld.description, desc, 'JSON-LD description');
+  assert.equal(ld.softwareVersion, V);
+  assert.equal(ld.name, 'MailAnalyzer');
+  assert.deepEqual([...html.matchAll(/<link rel="canonical" href="([^"]+)">/g)].map(m => m[1]), [C.SHARE.url]);
+  assert.equal(one('og:url'), C.SHARE.url);
+  assert.equal(ld.url, C.SHARE.url);
+  assert.equal(one('og:site_name'), 'RadMage Labs');
+  assert.match(one('og:title'), /^MailAnalyzer\b/);
+  assert.equal(one('twitter:card'), 'summary_large_image');
+  // MailAnalyzer reads what mail servers reported; nothing public may say it verifies or validates authentication
+  for (const s of [titles[0], desc, one('og:title'), one('og:description'), one('og:image:alt'), ld.description, C.SHARE.title, C.SHARE.text]) assert.ok(!/verif|validat/i.test(s), s);
+});
+
+test('Share passes only the public page address, with a fixed title and line', () => {
+  assert.deepEqual(Object.keys(C.SHARE), ['title', 'text', 'url']);
+  assert.ok(Object.isFrozen(C.SHARE));
+  assert.equal(C.SHARE.url, 'https://radmagelabs.com/mailanalyzer/');
+  const u = new URL(C.SHARE.url);
+  assert.equal(`${u.protocol}//${u.host}${u.pathname}`, C.SHARE.url);
+  assert.equal(u.search + u.hash + u.username + u.password, '', 'no query, fragment or credentials');
+  assert.equal(C.SHARE.title, 'MailAnalyzer | RadMage Labs');
+  assert.equal(C.SHARE.text, 'Analyze email headers, authentication results, and mail routing privately in your browser.');
+  // the page builds what it shares from C.SHARE alone, and never reads or rewrites its own address
+  assert.match(app, /const data = \{ title: C\.SHARE\.title, text: C\.SHARE\.text, url: C\.SHARE\.url \};/);
+  assert.ok(!/\blocation\b|document\.URL|\bhistory\.|document\.referrer/.test(app), 'app.js touches the address bar');
+  assert.match(html, /<button class="button" id="share-button" type="button" title="Share https:\/\/radmagelabs\.com\/mailanalyzer\/">Share<\/button>/);
+});
+
+test('the page links back to RadMage Labs with one plain link in the same tab', () => {
+  const links = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(links.length, 1);
+  assert.equal(links[0][1], ' class="labs-link" href="https://radmagelabs.com/"', 'no target, rel, ping or handler');
+  assert.equal(links[0][2], '<span class="arrow" aria-hidden="true">&larr;</span> Back to RadMage Labs');
+  assert.match(html, /<nav class="labs-nav" aria-label="RadMage Labs"><a class="labs-link"/);
 });
 
 test('the page is ready to host under /mailanalyzer/: no root-relative paths, canonical and preview set', () => {

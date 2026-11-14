@@ -12,7 +12,14 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.0.1';
+  // What the page's Share button passes: the public page address and a fixed title and line, wherever the page was
+  // opened. Nothing from a message, no query string, no fragment and no tracking parameters ever go with it.
+  const SHARE = Object.freeze({
+    title: 'MailAnalyzer | RadMage Labs',
+    text: 'Analyze email headers, authentication results, and mail routing privately in your browser.',
+    url: 'https://radmagelabs.com/mailanalyzer/'
+  });
   // Hard limits. A real header block is a few dozen kilobytes; these keep a hostile file or paste
   // from tying up the page. Anything past them is left out and the analysis says so.
   const LIMITS = { blockChars: 1024 * 1024, headers: 5000, valueChars: 64 * 1024, emlBytes: 2 * 1024 * 1024, msgBytes: 100 * 1024 * 1024, recentChars: 256 * 1024, recentMax: 25 };
@@ -1064,7 +1071,7 @@
   ].join('\n');
 
   return {
-    VERSION, LIMITS, THEMES, KEYS, SYSTEMS, SFV, CAT, IPV, SFTY, DIR, ATP, MBX_DEST, KNOWN, CATEGORIES, BRANDS, SAMPLE, REPORT_DEFAULTS,
+    VERSION, SHARE, LIMITS, THEMES, KEYS, SYSTEMS, SFV, CAT, IPV, SFTY, DIR, ATP, MBX_DEST, KNOWN, CATEGORIES, BRANDS, SAMPLE, REPORT_DEFAULTS,
     setDomains, getDomains, parseDomains, sclMeaning, bclMeaning, pclMeaning, compauthReason,
     fmtTime, fmtDur, utcOffset, hashText, visible, firstAddr, isPrivateIp, systemOf,
     splitHeaders, headerBlock, decodeWords, parseMailboxes, parseAddress, domainOf, orgDomain, parseMailDate, parseReceived, parseAuthResults, parseKv, tagsOf,

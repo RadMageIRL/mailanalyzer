@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.1 - 2026-11-14
+
+### Added
+
+- **Back to RadMage Labs**, a link above the title, at every page width.
+- **Share** in the toolbar. It opens your device's share sheet with the page's public address, `https://radmagelabs.com/mailanalyzer/`, or copies that address where there is no share sheet (or the sheet fails), and says whether the copy worked; if the clipboard is blocked, it shows the address instead. Closing the sheet does nothing. It shares the same address whether the page was opened on radmagelabs.com, on GitHub Pages or from a file on disk, with no query string or tracking parameters, and never anything you analyzed.
+
+### Changed
+
+- A shorter page title (`MailAnalyzer | Email Header Analyzer | RadMage Labs`, 51 characters, down from 95) and a shorter description (134 characters, down from 178). The link-preview description and the structured data now use the same description as the page.
+
 ## v1.0.0 - 2026-11-14
 
 The first public release. MailAnalyzer was a private tool of mine before this, under the name mops; settings saved by that version (theme, report options, your domains and the recent list) carry over the first time the page opens.

@@ -4,7 +4,7 @@ A local-first email header analyzer for SPF, DKIM, DMARC, Microsoft 365, mail ro
 
 **Use it at [radmagelabs.com/mailanalyzer](https://radmagelabs.com/mailanalyzer/)**, or download the release and open it from your own computer.
 
-Current version: **v1.0.0**
+Current version: **v1.0.1**
 
 ![MailAnalyzer in the dark theme analyzing the built-in sample, a vendor invoice sent through Mailgun to Microsoft 365: the headline Possible impersonation, the findings, the message summary and the SPF and DKIM results](screenshots/mailanalyzer.png)
 
@@ -19,6 +19,7 @@ Current version: **v1.0.0**
 - **Your domains:** list your mail domains in About and MailAnalyzer recognizes your own servers and lookalikes of your domains.
 - **A troubleshooting report** to paste into a ticket, with masking options, plus copy and download of the original headers.
 - **Recent history** in this browser, light and dark themes, keyboard shortcuts, and a layout that works from 320 pixels wide.
+- **Share** sends the page's public address, `https://radmagelabs.com/mailanalyzer/`, through your device's share sheet, or copies it where there is no share sheet. **Back to RadMage Labs**, above the title, goes to the rest of my tools.
 
 ## Supported input
 
@@ -50,6 +51,7 @@ Keyboard: `ctrl`+`enter` analyze, `r` report, `R` (shift+r) refresh, `e` edit th
 
 - **Nothing leaves your browser.** The page makes no network requests after it loads: no DNS lookups, no APIs, no analytics, no tracking, no fonts or scripts from anywhere else. Its Content Security Policy blocks inline scripts and all outgoing connections (`connect-src 'none'`).
 - **What it keeps, all in this browser:** the theme, the report options, your domains, and a recent list of up to 25 header blocks in `localStorage`; the message you are looking at in `sessionStorage`, gone when the tab closes. Only headers are ever stored, never a body pasted with them, and never attachments. Remove items or clear the list from the Recent dialog; **New** forgets the current message.
+- **Share passes the public address only.** It is the same address wherever the page was opened (radmagelabs.com, GitHub Pages or a file on disk), with no query string or tracking parameters, and nothing you analyzed goes with it. The page never puts headers, addresses or message IDs in its own address.
 - **Masking is partial.** The report's masking option hides the mailbox part of addresses (`j***@example.com`) and nothing else. Display names, domains, host names, IP addresses, the subject (unless you hide it) and encoded values such as tracking IDs stay as they are, and Message-ID and Network-Message-Id are never masked. Headers can identify people and systems; read a report before you share it.
 - **Untrusted text is treated as text.** Every header value is escaped before it is shown, and invisible and text-direction characters are spelled out as `[U+XXXX]` on screen and in reports, so a header cannot run code in the page or reorder what you read.
 - **Hostile files are bounded.** A header block is read up to 1 MB and 5000 headers, each header up to 64 KB; `.msg` files up to 100 MB, with every size and sector number checked against the file before use.
@@ -71,7 +73,7 @@ The release was tested with the browser suite in this repository on Windows in G
 
 ## Run it locally
 
-Download `MailAnalyzer-v1.0.0.zip` from the [latest release](https://github.com/RadMageIRL/mailanalyzer/releases/latest), unzip it and open `MailAnalyzer-v1.0.0/index.html` in a current browser. It works offline from disk. Check the download against `SHA256SUMS.txt` from the same release.
+Download `MailAnalyzer-v1.0.1.zip` from the [latest release](https://github.com/RadMageIRL/mailanalyzer/releases/latest), unzip it and open `MailAnalyzer-v1.0.1/index.html` in a current browser. It works offline from disk. Check the download against `SHA256SUMS.txt` from the same release.
 
 ## Development
 

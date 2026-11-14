@@ -15,12 +15,35 @@ const { msg } = require('../cfb.js');
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OWN = ['index.html', 'mailanalyzer-core.js', 'app.js'];
 
+// Replaces the share sheet and the clipboard with recorders before the page loads, so a test sees exactly what Share
+// passes. share: 'ok', 'abort' (the sheet was closed), 'fail', 'cannot' (canShare says no) or 'none' (no Web Share);
+// clip: 'ok', 'fail', 'none' (no async clipboard) or 'real'; legacy: what document.execCommand('copy') returns.
+const mockShare = (page, { share = 'ok', clip = 'ok', legacy = false } = {}) => page.addInitScript(({ share, clip, legacy }) => {
+  window.__shared = []; window.__copied = []; window.__legacy = [];
+  const def = (o, k, v) => Object.defineProperty(o, k, { value: v, configurable: true, writable: true });
+  if (share === 'none') { def(navigator, 'share', undefined); def(navigator, 'canShare', undefined); } else {
+    def(navigator, 'canShare', () => share !== 'cannot');
+    def(navigator, 'share', async data => {
+      window.__shared.push(JSON.parse(JSON.stringify(data)));
+      if (share === 'abort') throw new DOMException('Share canceled', 'AbortError');
+      if (share === 'fail') throw new DOMException('Share denied', 'NotAllowedError');
+    });
+  }
+  if (clip !== 'real') def(navigator, 'clipboard', clip === 'none' ? undefined : { writeText: async t => { window.__copied.push(t); if (clip === 'fail') throw new DOMException('Write blocked', 'NotAllowedError'); } });
+  const exec = document.execCommand.bind(document);
+  def(document, 'execCommand', (cmd, ...rest) => { if (cmd !== 'copy') return exec(cmd, ...rest); window.__legacy.push(document.activeElement && document.activeElement.value); return legacy; });
+}, { share, clip, legacy });
+const recorded = page => page.evaluate(() => ({ shared: window.__shared, copied: window.__copied, legacy: window.__legacy }));
+const settle = page => page.evaluate(() => new Promise(r => setTimeout(r, 100)));
+
 const test = base.extend({
-  app: async ({ page, baseURL }, use) => {
+  shareMock: [null, { option: true }],
+  app: async ({ page, baseURL, shareMock }, use) => {
     const errors = [], requests = [];
     page.on('pageerror', e => errors.push(`pageerror: ${e.message}`));
     page.on('console', m => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
     page.on('request', r => requests.push(r.url()));
+    if (shareMock) await mockShare(page, shareMock);
     await page.goto(baseURL);
     await page.waitForSelector('html[data-ready="1"]');
     await use({ page, errors, requests });
@@ -35,7 +58,7 @@ const local = (page, key) => page.evaluate(k => localStorage.getItem(k), key);
 const session = (page, key) => page.evaluate(k => sessionStorage.getItem(k), key);
 
 test('loads under /mailanalyzer/ as MailAnalyzer, requesting only its own three files', async ({ app: { page, requests }, baseURL }) => {
-  await expect(page).toHaveTitle(new RegExp(`^MailAnalyzer v${C.VERSION.replace(/\./g, '\\.')} - `));
+  await expect(page).toHaveTitle('MailAnalyzer | Email Header Analyzer | RadMage Labs');
   await expect(page.locator('h1')).toHaveText('MailAnalyzer');
   await expect(page.locator('#version')).toHaveText(`v${C.VERSION}`);
   const names = requests.map(u => u.slice(baseURL.length) || 'index.html');
@@ -347,4 +370,176 @@ base('runs from a file on disk with no network at all', async ({ page, context }
   await expect(page.locator('#verdict h2')).toContainText('Possible impersonation');
   expect(errors).toEqual([]);
   expect(requests.filter(u => !u.startsWith('file:') && !u.startsWith('data:'))).toEqual([]);
+});
+
+// ---------- Share and Back to RadMage Labs ----------
+const LINK = C.SHARE.url;
+const SHARED = { title: C.SHARE.title, text: C.SHARE.text, url: LINK };
+const shareButton = page => page.getByRole('button', { name: 'Share', exact: true });
+const PRIVATE = F.m365({ subject: 'Quarterly payroll 7731', msgid: 'leak-check-7731@mail.example-vendor.com', from: 'From: "Payroll Desk" <payroll.desk@example-vendor.com>' });
+
+test.describe('Share with a share sheet', () => {
+  test.use({ shareMock: { share: 'ok' } });
+
+  test('passes the public address, title and line, copies nothing, and says so', async ({ app: { page } }) => {
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText('Link shared');
+    expect(await recorded(page)).toEqual({ shared: [SHARED], copied: [], legacy: [] });
+  });
+
+  test('is a labeled toolbar button that Enter and Space press', async ({ app: { page } }) => {
+    const b = shareButton(page);
+    await expect(b).toBeVisible();
+    await expect(b).toHaveAttribute('title', `Share ${LINK}`);
+    await expect(page.getByRole('navigation', { name: 'Analyzer controls' }).getByRole('button', { name: 'Share', exact: true })).toHaveCount(1);
+    await b.focus();
+    await expect(b).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await recorded(page)).shared.length).toBe(1);
+    await page.keyboard.press('Space');
+    await expect.poll(async () => (await recorded(page)).shared.length).toBe(2);
+    await expect(b).toBeFocused();
+  });
+
+  test('nothing from a message or the address bar goes with it, and analysis leaves the address alone', async ({ app: { page }, baseURL }) => {
+    const opened = `${baseURL}?utm_source=test&from=payroll#payroll`;
+    await page.goto(opened);
+    await page.waitForSelector('html[data-ready="1"]');
+    await analyzeText(page, PRIVATE);
+    await expect(page.locator('#summary')).toContainText('Quarterly payroll 7731');
+    await page.click('#report-button');
+    await page.click('#report-close');
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText('Link shared');
+    const r = await recorded(page);
+    expect(r.shared).toEqual([SHARED]);
+    const all = JSON.stringify(r).toLowerCase();
+    for (const s of ['payroll', '7731', 'leak-check', 'example-vendor', '198.51.100', 'utm', '#', '?']) expect(all, s).not.toContain(s);
+    expect(page.url()).toBe(opened);
+  });
+
+  test('analysis, the report and Share make no network requests at all', async ({ app: { page, requests } }) => {
+    const before = requests.length;
+    await analyzeText(page, PRIVATE);
+    await page.click('#report-button');
+    await page.click('#report-close');
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText('Link shared');
+    await page.click('#sample-button');
+    await expect(page.locator('#verdict h2')).toContainText('Possible impersonation');
+    await settle(page);
+    expect(requests.slice(before)).toEqual([]);
+  });
+});
+
+test.describe('Share when the sheet is closed', () => {
+  test.use({ shareMock: { share: 'abort' } });
+  test('does nothing else', async ({ app: { page } }) => {
+    await shareButton(page).click();
+    await expect.poll(async () => (await recorded(page)).shared.length).toBe(1);
+    await settle(page);
+    expect((await recorded(page)).copied).toEqual([]);
+    await expect(page.locator('#toast')).not.toHaveClass(/visible/);
+  });
+});
+
+test.describe('Share when the sheet fails', () => {
+  test.use({ shareMock: { share: 'fail' } });
+  test('copies the link instead', async ({ app: { page } }) => {
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText(`Link copied: ${LINK}`);
+    const r = await recorded(page);
+    expect([r.shared.length, r.copied]).toEqual([1, [LINK]]);
+  });
+});
+
+test.describe('Share when the page cannot share', () => {
+  test.use({ shareMock: { share: 'cannot' } });
+  test('copies the link without opening the sheet', async ({ app: { page } }) => {
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText(`Link copied: ${LINK}`);
+    expect(await recorded(page)).toEqual({ shared: [], copied: [LINK], legacy: [] });
+  });
+});
+
+test.describe('Share without Web Share', () => {
+  test.use({ shareMock: { share: 'none' } });
+  test('copies the link and says so', async ({ app: { page } }) => {
+    await page.click('#sample-button');
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText(`Link copied: ${LINK}`);
+    expect(await recorded(page)).toEqual({ shared: [], copied: [LINK], legacy: [] });
+  });
+});
+
+test.describe('Share without Web Share or the async clipboard', () => {
+  test.use({ shareMock: { share: 'none', clip: 'none', legacy: true } });
+  test('copies the link with the older copy command and gives focus back', async ({ app: { page } }) => {
+    await shareButton(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#toast')).toHaveText(`Link copied: ${LINK}`);
+    expect(await recorded(page)).toEqual({ shared: [], copied: [], legacy: [LINK] });
+    await expect(shareButton(page)).toBeFocused();
+    await expect(page.locator('textarea')).toHaveCount(1);
+  });
+});
+
+test.describe('Share when every way to copy is blocked', () => {
+  test.use({ shareMock: { share: 'none', clip: 'fail', legacy: false } });
+  test('shows the address with a clear message', async ({ app: { page } }) => {
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText(`Clipboard blocked; the link is ${LINK}`);
+    expect(await recorded(page)).toEqual({ shared: [], copied: [LINK], legacy: [LINK] });
+  });
+});
+
+test.describe('Share with the real clipboard', () => {
+  test.use({ shareMock: { share: 'none', clip: 'real' } });
+  test('puts the public address on the clipboard', async ({ app: { page }, browserName, context }) => {
+    test.skip(browserName !== 'chromium', 'clipboard read-back is only scriptable in Chromium');
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await analyzeText(page, PRIVATE);
+    await shareButton(page).click();
+    await expect(page.locator('#toast')).toHaveText(`Link copied: ${LINK}`);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(LINK);
+  });
+});
+
+base('from a file on disk, Share still passes the public address', async ({ page, context }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await mockShare(page, { share: 'ok' });
+  await context.setOffline(true);
+  await page.goto(pathToFileURL(join(ROOT, 'dist', 'site', 'index.html')).href);
+  await page.waitForSelector('html[data-ready="1"]');
+  await page.click('#sample-button');
+  await shareButton(page).click();
+  await expect(page.locator('#toast')).toHaveText('Link shared');
+  expect((await recorded(page)).shared).toEqual([SHARED]);
+  expect(errors).toEqual([]);
+});
+
+test('Back to RadMage Labs is a plain link to radmagelabs.com above the title, in the same tab', async ({ app: { page } }) => {
+  const link = page.getByRole('navigation', { name: 'RadMage Labs' }).getByRole('link', { name: 'Back to RadMage Labs', exact: true });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute('href', 'https://radmagelabs.com/');
+  expect(await link.evaluate(a => [a.target, a.rel, a.hasAttribute('download'), a.hasAttribute('ping')])).toEqual(['', '', false, false]);
+  const [l, h] = [await link.boundingBox(), await page.locator('h1').boundingBox()];
+  expect(l.y + l.height).toBeLessThanOrEqual(h.y);
+  expect(l.height).toBeGreaterThanOrEqual(24);
+});
+
+base('Back to RadMage Labs opens radmagelabs.com from the keyboard and sends no referrer', async ({ page, baseURL }) => {
+  const asked = [];
+  await page.route('https://radmagelabs.com/**', route => {
+    asked.push({ url: route.request().url(), referer: route.request().headers().referer });
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>RadMage Labs</title>' });
+  });
+  await page.goto(baseURL);
+  await page.waitForSelector('html[data-ready="1"]');
+  await page.click('#sample-button');
+  await page.getByRole('link', { name: 'Back to RadMage Labs' }).focus();
+  await page.keyboard.press('Enter');
+  await page.waitForURL('https://radmagelabs.com/');
+  expect(asked).toEqual([{ url: 'https://radmagelabs.com/', referer: undefined }]);
 });
